@@ -178,50 +178,77 @@ void wczytajOsobyZPliku(vector <Adresat> &ksiazkaAdresowa)
         plik.close();
     }
 }
-void usunAdresata(vector <Adresat> &ksiazkaAdresowa)
+
+void ujednolicPlikiPoEdycjiAdresata(vector <Adresat> &ksiazkaAdresowa, int idZmienianegoAdresata)
 {
-    int idDoUsuniecia;
-    char potwierdzenieUsuniecia;
-    int i;
-
-    if(ksiazkaAdresowa.size() > 0)
+    ifstream plik1;
+    ofstream plik2;
+    string daneAdresataOddzieloneKreskami="";
+    Adresat adresat;
+    plik1.open("ksiazka_adresowa.txt",ios::in);
+    plik2.open("ksiazka_adresowa_tymczasowa.txt",ios::out | ios::trunc);
+    int i =0;
+    if(plik1.good() == true)
     {
-        cout << "Podaj id adresata, ktorego chcesz usunac"<<endl;
-        cin >> idDoUsuniecia;
-        cin.sync();
-
-        for(i = 0; (unsigned)i < ksiazkaAdresowa.size(); i++)
+        while(getline(plik1, daneAdresataOddzieloneKreskami))
         {
-            if(ksiazkaAdresowa[i].id == idDoUsuniecia)
+            adresat = pobierzDanePojedynczegoAdresata(daneAdresataOddzieloneKreskami);
+            
+            if(adresat.id != idZmienianegoAdresata)
             {
-                cout << "Czy na pewno chcesz usunac adresata o ID: " << idDoUsuniecia <<  "(t/n)?" <<endl;
-                potwierdzenieUsuniecia = wczytajZnak();
-
-                if(potwierdzenieUsuniecia == 't')
-                {
-                    ksiazkaAdresowa.erase(ksiazkaAdresowa.begin() + i);
-                    zapiszDoPlikuZaktualizowaneOsoby(ksiazkaAdresowa);
-                    cout << "Osoba zostala usunieta"<<endl;
-                    this_thread::sleep_for(2000ms);
-                    break;
-                }
-                else
-                {
-                    cout << "Adresat nie zostal usuniety"<<endl;
-                    this_thread::sleep_for(2000ms);
-                    break;
-                }
-            }
-            if(ksiazkaAdresowa[i].id != idDoUsuniecia && (unsigned)i == (ksiazkaAdresowa.size()-1))
+                plik2 << adresat.id << '|';
+                plik2 << adresat.idZalogowanengoUzytkownika << '|';
+                plik2 << adresat.imie << '|';
+                plik2 << adresat.nazwisko << '|';
+                plik2 << adresat.numerTelefonu << '|';
+                plik2 << adresat.email << '|';
+                plik2 << adresat.adres << '|'<<endl;
+            }else
             {
-                cout << "Brak adresata o takim ID w ksiazce"<<endl;
-                this_thread::sleep_for(2000ms);
+                for(int i = 0; i < ksiazkaAdresowa.size(); i++)
+                {
+                    if(ksiazkaAdresowa[i].id == idZmienianegoAdresata)
+                    {
+                        plik2 << ksiazkaAdresowa[i].id << '|';
+                        plik2 << ksiazkaAdresowa[i].idZalogowanengoUzytkownika << '|';
+                        plik2 << ksiazkaAdresowa[i].imie << '|';
+                        plik2 << ksiazkaAdresowa[i].nazwisko << '|';
+                        plik2 << ksiazkaAdresowa[i].numerTelefonu << '|';
+                        plik2 << ksiazkaAdresowa[i].email << '|';
+                        plik2 << ksiazkaAdresowa[i].adres << '|'<<endl;
+                        break;
+                    }
+                }
             }
         }
+        remove("ksiazka_adresowa.txt");
+        rename("ksiazka_adresowa_tymczasowa.txt", "ksiazka_adresowa.txt");
+    }
+}
+
+void zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(vector <Adresat> &ksiazkaAdresowa, int idDoEdycji)
+{
+    ofstream plik;
+    plik.open("ksiazka_adresowa_tymczasowa.txt");
+
+    if(plik.good() == true)
+    {
+        for(int i = 0; (unsigned)i < ksiazkaAdresowa.size(); i++)
+        {
+            plik << ksiazkaAdresowa[i].id << '|';
+            plik << ksiazkaAdresowa[i].idZalogowanengoUzytkownika << '|';
+            plik << ksiazkaAdresowa[i].imie << '|';
+            plik << ksiazkaAdresowa[i].nazwisko << '|';
+            plik << ksiazkaAdresowa[i].numerTelefonu << '|';
+            plik << ksiazkaAdresowa[i].email << '|';
+            plik << ksiazkaAdresowa[i].adres << '|'<<endl;
+        }
+        plik.close();
     }
     else
-        cout << "Brak adresatow do usuniecia"<<endl;
-    this_thread::sleep_for(2000ms);
+    {
+        cout << "Brak dostepu do pliku"<<endl;
+    }
 }
 
 void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
@@ -256,7 +283,8 @@ void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
                 cout << "Wpisz nowe imie:"<<endl;
                 ksiazkaAdresowa[i].imie = wczytajLinie();
                 cout << "Imie zostalo edytowane" <<endl;
-                zapiszDoPlikuZaktualizowaneOsoby(ksiazkaAdresowa);
+                zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(ksiazkaAdresowa, idDoEdycji);
+                ujednolicPlikiPoEdycjiAdresata(ksiazkaAdresowa, idDoEdycji);
                 this_thread::sleep_for(2000ms);
                 break;
             }
@@ -265,7 +293,8 @@ void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
                 cout << "Wpisz nowe nazwisko:"<<endl;
                 ksiazkaAdresowa[i].nazwisko = wczytajLinie();
                 cout << "Nazwisko zostalo edytowane" <<endl;
-                zapiszDoPlikuZaktualizowaneOsoby(ksiazkaAdresowa);
+                zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(ksiazkaAdresowa, idDoEdycji);
+                ujednolicPlikiPoEdycjiAdresata(ksiazkaAdresowa, idDoEdycji);
                 this_thread::sleep_for(2000ms);
                 break;
             }
@@ -274,7 +303,8 @@ void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
                 cout << "Wpisz nowy numer telefonu:"<<endl;
                 ksiazkaAdresowa[i].numerTelefonu = wczytajLinie();
                 cout << "Numer telefonu zostal edytowany" <<endl;
-                zapiszDoPlikuZaktualizowaneOsoby(ksiazkaAdresowa);
+                zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(ksiazkaAdresowa, idDoEdycji);
+                ujednolicPlikiPoEdycjiAdresata(ksiazkaAdresowa, idDoEdycji);
                 this_thread::sleep_for(2000ms);
                 break;
             }
@@ -283,7 +313,8 @@ void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
                 cout << "Wpisz nowy adres email:"<<endl;
                 ksiazkaAdresowa[i].email = wczytajLinie();
                 cout << "Email zostal edytowany" <<endl;
-                zapiszDoPlikuZaktualizowaneOsoby(ksiazkaAdresowa);
+                zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(ksiazkaAdresowa, idDoEdycji);
+                ujednolicPlikiPoEdycjiAdresata(ksiazkaAdresowa, idDoEdycji);
                 this_thread::sleep_for(2000ms);
                 break;
             }
@@ -292,7 +323,8 @@ void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
                 cout << "Wpisz nowy adres zamieszkania:"<<endl;
                 ksiazkaAdresowa[i].adres = wczytajLinie();
                 cout << "Adres zostal edytowany" <<endl;
-                zapiszDoPlikuZaktualizowaneOsoby(ksiazkaAdresowa);
+                zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(ksiazkaAdresowa, idDoEdycji);
+                ujednolicPlikiPoEdycjiAdresata(ksiazkaAdresowa, idDoEdycji);
                 this_thread::sleep_for(2000ms);
                 break;
             }
@@ -308,6 +340,54 @@ void edytujAdresata(vector <Adresat> &ksiazkaAdresowa)
         }
     }
 }
+
+void usunAdresata(vector <Adresat> &ksiazkaAdresowa)
+{
+    int idDoEdycji;
+    char potwierdzenieUsuniecia;
+    int i;
+
+    if(ksiazkaAdresowa.size() > 0)
+    {
+        cout << "Podaj id adresata, ktorego chcesz usunac"<<endl;
+        cin >> idDoEdycji;
+        cin.sync();
+
+        for(i = 0; (unsigned)i < ksiazkaAdresowa.size(); i++)
+        {
+            if(ksiazkaAdresowa[i].id == idDoEdycji)
+            {
+                cout << "Czy na pewno chcesz usunac adresata o ID: " << idDoEdycji <<  "(t/n)?" <<endl;
+                potwierdzenieUsuniecia = wczytajZnak();
+
+                if(potwierdzenieUsuniecia == 't')
+                {
+                    ksiazkaAdresowa.erase(ksiazkaAdresowa.begin() + i);
+                    zapiszDoTymczasowegoPlikuZaktualizowaneOsoby(ksiazkaAdresowa, idDoEdycji);
+                    ujednolicPlikiPoEdycjiAdresata(ksiazkaAdresowa, idDoEdycji);
+                    cout << "Osoba zostala usunieta"<<endl;
+                    this_thread::sleep_for(2000ms);
+                    break;
+                }
+                else
+                {
+                    cout << "Adresat nie zostal usuniety"<<endl;
+                    this_thread::sleep_for(2000ms);
+                    break;
+                }
+            }
+            if(ksiazkaAdresowa[i].id != idDoEdycji && (unsigned)i == (ksiazkaAdresowa.size()-1))
+            {
+                cout << "Brak adresata o takim ID w ksiazce"<<endl;
+                this_thread::sleep_for(2000ms);
+            }
+        }
+    }
+    else
+        cout << "Brak adresatow do usuniecia"<<endl;
+        this_thread::sleep_for(2000ms);
+}
+
 
 void wyswietlWszystkich(vector <Adresat> ksiazkaAdresowa)
 {
@@ -598,10 +678,10 @@ int main()
                         wyswietlWszystkich(ksiazkaAdresowa);
                         break;
                     case '5':
-                        
+                        edytujAdresata(ksiazkaAdresowa);
                         break;
                     case '6':
-                        
+                        usunAdresata(ksiazkaAdresowa);
                         break;
                     case '7':
                         zmienHaslo(uzytkownicy, idZalogowanegoUzytkownia, iloscUzytkownikow);
@@ -617,3 +697,5 @@ int main()
             }
         }
     }
+
+
