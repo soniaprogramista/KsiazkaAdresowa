@@ -11,7 +11,7 @@ struct Adresat
 {
     string imie, nazwisko, numerTelefonu, email, adres;
     int id;
-    int idZalogowanengoUzytkownika;
+    int idZalogowanegoUzytkownika;
 };
 
 struct Uzytkownik
@@ -77,6 +77,7 @@ void dopiszOsobeDoPliku(Adresat adresat)
     if(plik.good() == true)
     {
         plik << adresat.id << '|';
+        plik << adresat.idZalogowanegoUzytkownika<< '|';
         plik << adresat.imie << '|';
         plik << adresat.nazwisko << '|';
         plik << adresat.numerTelefonu << '|';
@@ -92,18 +93,13 @@ void dopiszOsobeDoPliku(Adresat adresat)
     }
 }
 
-void dopiszOsobeDoKsiazki(vector <Adresat> &ksiazkaAdresowa)
+void dopiszOsobeDoKsiazki(vector <Adresat> &ksiazkaAdresowa, int idZalogowanegoUzytkownika, int ostatnieId)
 {
     Adresat adresat;
-
-    if(ksiazkaAdresowa.empty() == true)
-    {
-        adresat.id = 1;
-    }
-    else
-    {
-        adresat.id = ksiazkaAdresowa.back().id + 1;
-    }
+    
+    adresat.idZalogowanegoUzytkownika = idZalogowanegoUzytkownika;
+    adresat.id = ostatnieId;
+    
     cout << "Podaj imie"<<endl;
     adresat.imie = wczytajLinie();
     cout << "Podaj nazwisko"<<endl;
@@ -161,7 +157,7 @@ Adresat pobierzDanePojedynczegoAdresata(string daneAdresataOddzieloneKreskami)
     return adresat;
 }
 
-void wczytajOsobyZPliku(vector <Adresat> &ksiazkaAdresowa)
+void wczytajOsobyZPliku(vector <Adresat> &ksiazkaAdresowa, int idZalogowanegoUzytkownika)
 {
     Adresat adresat;
     string daneAdresataOddzieloneKreskami = "";
@@ -173,7 +169,10 @@ void wczytajOsobyZPliku(vector <Adresat> &ksiazkaAdresowa)
         while(getline(plik, daneAdresataOddzieloneKreskami))
         {
             adresat = pobierzDanePojedynczegoAdresata(daneAdresataOddzieloneKreskami);
-            ksiazkaAdresowa.push_back(adresat);
+            if (adresat.idZalogowanegoUzytkownika == idZalogowanegoUzytkownika)
+            {
+                ksiazkaAdresowa.push_back(adresat);
+            }
         }
         plik.close();
     }
@@ -532,88 +531,116 @@ void zmienHaslo(vector <Uzytkownik> &uzytkownicy, int idZalogowanegoUzytkownika,
     zapiszDoPlikuZaktualizowanychUzytkownikow(uzytkownicy);
 }
 
+int sprawdzOstatnieId()
+{
+    int ostatnieId = 0;
+    string ostatnieIdSlowo="";
+    string linia;
+    string ostatniaLinia;
+    fstream plik;
+    plik.open("ksiazka_adresowa.txt",ios::in);
+    
+    if(plik.good() == true)
+    {
+        while(getline(plik, linia))
+        {
+            ostatniaLinia = linia;
+        }
+        plik.close();
+        ostatnieId = stoi(ostatniaLinia);
+    }else{
+        ostatnieId = 0;
+    }
+    return ostatnieId;
+}
+
 int main()
 {
     char wyborZMenu;
-        int iloscUzytkownikow = 0;;
-        int idZalogowanegoUzytkownia = 0;
-        vector <Adresat> ksiazkaAdresowa;
-        vector <Uzytkownik> uzytkownicy;
-        iloscUzytkownikow = uzytkownicy.size();
-        wczytajUzytkownikowZPliku(uzytkownicy);
-        
-        while(1)
+    int iloscUzytkownikow = 0;
+    int idZalogowanegoUzytkownika = 0;
+    vector <Adresat> ksiazkaAdresowa;
+    wczytajOsobyZPliku(ksiazkaAdresowa, idZalogowanegoUzytkownika);
+    vector <Uzytkownik> uzytkownicy;
+    wczytajUzytkownikowZPliku(uzytkownicy);
+    int ostatnieId =0;
+    
+    while(1)
+    {
+        if (idZalogowanegoUzytkownika == 0)
         {
-            if (idZalogowanegoUzytkownia == 0)
+            system("clear");
+            cout << ">>MENU GLOWNE<<"<<endl<<endl;
+            cout << "1. Zarejestruj sie"<<endl;
+            cout << "2. Zaloguj sie"<<endl;
+            cout << "9. Zakoncz program"<<endl;
+            
+            wyborZMenu = wczytajZnak();
+            
+            switch(wyborZMenu)
             {
-                system("clear");
-                cout << ">>MENU GLOWNE<<"<<endl<<endl;
-                cout << "1. Zarejestruj sie"<<endl;
-                cout << "2. Zaloguj sie"<<endl;
-                cout << "9. Zakoncz program"<<endl;
-                
-                wyborZMenu = wczytajZnak();
-                
-                switch(wyborZMenu)
-                {
-                    case '1':
-                        iloscUzytkownikow = zarejestruj(uzytkownicy);
-                        zapiszDoPlikuZaktualizowanychUzytkownikow(uzytkownicy);
-                        break;
-                    case '2':
-                        idZalogowanegoUzytkownia = zaloguj(uzytkownicy);
-                        break;
-                    case '9':
-                        exit(0);
-                        break;
-                }
-            }else
+                case '1':
+                    iloscUzytkownikow = zarejestruj(uzytkownicy);
+                    zapiszDoPlikuZaktualizowanychUzytkownikow(uzytkownicy);
+                    break;
+                case '2':
+                    idZalogowanegoUzytkownika = zaloguj(uzytkownicy);
+                    ksiazkaAdresowa.clear();
+                    wczytajOsobyZPliku(ksiazkaAdresowa, idZalogowanegoUzytkownika);
+                    ostatnieId = sprawdzOstatnieId();
+                    break;
+                case '9':
+                    exit(0);
+                    break;
+            }
+        }else
+        {
+            system("clear");
+                    cout << ">>KSIAZKA ADRESOWA<<"<<endl<<endl;
+                    cout << "1. Dopisz osobe do ksiazki adresowej"<<endl;
+                    cout << "2. Wyszukaj osobe po imieniu"<<endl;
+                    cout << "3. Wyszukaj osobe po nazwisku"<<endl;
+                    cout << "4. Wyswietl wszystkie osoby"<<endl;
+                    cout << "5. Edytuj osobe"<<endl;
+                    cout << "6. Usun osobe"<<endl;
+                    cout << "7. Zmien haslo"<<endl;
+                    cout << "8. Wyloguj sie"<<endl;
+                    cout << "9. Zakoncz program"<<endl;
+            
+            wyborZMenu = wczytajZnak();
+            
+            switch(wyborZMenu)
             {
-                system("clear");
-                        cout << ">>KSIAZKA ADRESOWA<<"<<endl<<endl;
-                        cout << "1. Dopisz osobe do ksiazki adresowej"<<endl;
-                        cout << "2. Wyszukaj osobe po imieniu"<<endl;
-                        cout << "3. Wyszukaj osobe po nazwisku"<<endl;
-                        cout << "4. Wyswietl wszystkie osoby"<<endl;
-                        cout << "5. Edytuj osobe"<<endl;
-                        cout << "6. Usun osobe"<<endl;
-                        cout << "7. Zmien haslo"<<endl;
-                        cout << "8. Wyloguj sie"<<endl;
-                        cout << "9. Zakoncz program"<<endl;
-                
-                wyborZMenu = wczytajZnak();
-                
-                switch(wyborZMenu)
-                {
-                    case '1':
-                        dopiszOsobeDoKsiazki(ksiazkaAdresowa);
-                        break;
-                    case '2':
-                        znajdzPoImieniu(ksiazkaAdresowa);
-                        break;
-                    case '3':
-                        znajdzPoNazwisku(ksiazkaAdresowa);
-                        break;
-                    case '4':
-                        wyswietlWszystkich(ksiazkaAdresowa);
-                        break;
-                    case '5':
-                        
-                        break;
-                    case '6':
-                        
-                        break;
-                    case '7':
-                        zmienHaslo(uzytkownicy, idZalogowanegoUzytkownia, iloscUzytkownikow);
-                        break;
-                    case '8':
-                        idZalogowanegoUzytkownia = 0;
-                        break;
-                    case '9':
-                        exit(0);
-                        break;
-                }
-                
+                case '1':
+                    ostatnieId = ostatnieId +1;
+                    dopiszOsobeDoKsiazki(ksiazkaAdresowa, idZalogowanegoUzytkownika, ostatnieId);
+                    break;
+                case '2':
+                    znajdzPoImieniu(ksiazkaAdresowa);
+                    break;
+                case '3':
+                    znajdzPoNazwisku(ksiazkaAdresowa);
+                    break;
+                case '4':
+                    wyswietlWszystkich(ksiazkaAdresowa);
+                    break;
+                case '5':
+                    
+                    break;
+                case '6':
+                    
+                    break;
+                case '7':
+                    zmienHaslo(uzytkownicy, idZalogowanegoUzytkownika, iloscUzytkownikow);
+                    break;
+                case '8':
+                    idZalogowanegoUzytkownika = 0;
+                    break;
+                case '9':
+                    exit(0);
+                    break;
             }
         }
     }
+}
+
